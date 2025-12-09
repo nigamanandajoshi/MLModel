@@ -52,4 +52,4 @@ matched_job_location_sorted/
 # Environment variables
 .env
 
-/youthform
+youthform
