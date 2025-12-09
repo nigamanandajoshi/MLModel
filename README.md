@@ -1,53 +1,69 @@
 # ML Job Matching API
 
-Cloud-ready job matching system using sentence-transformers for semantic job-resume matching.
+Production-ready REST API for semantic job matching using ML embeddings.
 
 ## Features
 
 - 🤖 ML-powered job matching using sentence-transformers
 - 📍 Location-based sorting with geopy
 - 🚀 REST API with Flask
-- ☁️ Deploy-ready for Render (free tier)
+- ☁️ Optimized for Render free tier (512MB RAM)
 - 🌐 CORS-enabled for frontend integration
+- 📝 Works with form data (no resume upload required)
 
-## Quick Start
+## Deployment
 
-### Local Development
+Deployed on Render: `https://your-app.onrender.com`
 
-1. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Generate Embeddings**
-   ```bash
-   python generate_embeddings.py
-   ```
-
-3. **Start API**
-   ```bash
-   python app.py
-   ```
-
-   API runs on `http://localhost:5000`
-
-### Deployment
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for deployment instructions.
 
 ## API Endpoints
 
-- `GET /api/health` - Health check
-- `POST /api/match-jobs` - Match jobs to resume
-- `POST /api/match-jobs-with-location` - Match jobs with location sorting
+### `GET /api/health`
+Health check - returns model status and job count
+
+### `POST /api/match-jobs`
+Match jobs based on user data (form or parsed resume)
+
+**Request:**
+```json
+{
+  "position": "Software Engineer",
+  "skills": "Python, React",
+  "qualification": "Bachelor's in CS",
+  "experience": "3 years"
+}
+```
+
+**Response:**
+Returns top 20 matched jobs with scores
+
+### `POST /api/match-jobs-with-location`
+Match jobs and sort by distance from user location
+
+**Request:**
+```json
+{
+  "position": "Software Engineer",
+  "skills": "Python, React",
+  "location": "San Francisco, CA"
+}
+```
+
+**Response:**
+Returns top 10 jobs sorted by proximity
 
 ## Tech Stack
 
 - **ML**: sentence-transformers (all-MiniLM-L6-v2)
 - **API**: Flask + Flask-CORS
 - **Location**: geopy + Nominatim
-- **Data**: pandas, numpy
+- **Data**: numpy
 
-## License
+## Memory Optimization
 
-MIT
+This deployment is optimized for Render's 512MB free tier:
+- ✅ No OCR/PDF parsing libraries
+- ✅ Uses lightweight sentence-transformers
+- ✅ Pre-computed job embeddings
+- ✅ Minimal dependencies

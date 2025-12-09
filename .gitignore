@@ -34,14 +34,17 @@ wheels/
 .DS_Store
 Thumbs.db
 
-# Output folders (keep json_output and matched folders local)
+# Development-only scripts (not needed in production)
+generate_embeddings.py
+search_jobs_weighted_optimized.py
+location_sort.py
+optional_resumetopdfonlypdfplumber.py
+
+# Output folders (keep local only)
 json_output/
 json_output_ollama/
 matched_job_weighted_optimized/
 matched_job_location_sorted/
-
-# Optional: Uncomment if you want to keep embeddings local
-# job_embeddings.json
 
 # Logs
 *.log
