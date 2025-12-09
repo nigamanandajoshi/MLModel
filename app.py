@@ -359,6 +359,16 @@ if __name__ == '__main__':
     print("🚀 Starting Flask server...", flush=True)
     print("📝 Model will load on first API request", flush=True)
     
+    # DEBUG: Check if job_embeddings.json exists
+    import os
+    if os.path.exists(JOB_EMBEDDINGS_PATH):
+        file_size = os.path.getsize(JOB_EMBEDDINGS_PATH)
+        print(f"✅ Found {JOB_EMBEDDINGS_PATH} ({file_size} bytes)", flush=True)
+    else:
+        print(f"❌ WARNING: {JOB_EMBEDDINGS_PATH} NOT FOUND!", flush=True)
+        print(f"   Current directory: {os.getcwd()}", flush=True)
+        print(f"   Files in directory: {os.listdir('.')}", flush=True)
+    
     port = int(os.environ.get('PORT', 5000))
     print(f"🌐 Server starting on port {port}", flush=True)
     sys.stdout.flush()
