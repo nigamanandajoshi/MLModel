@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output folders (keep json_output and matched folders local)
+json_output/
+json_output_ollama/
+matched_job_weighted_optimized/
+matched_job_location_sorted/
+
+# Optional: Uncomment if you want to keep embeddings local
+# job_embeddings.json
+
+# Logs
+*.log
+
+# Environment variables
+.env
