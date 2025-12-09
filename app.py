@@ -13,6 +13,7 @@ from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import time
+import sys
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend connection
@@ -31,48 +32,75 @@ WEIGHTS = {
     "experience": 0.10
 }
 
-# Global model and data (loaded once at startup)
+# Global model and data (loaded lazily)
 model = None
 job_database = None
 job_matrix = None
 geolocator = None
+_model_loading = False
+_model_loaded = False
 
-def load_model_and_data():
-    """Load the ML model and job database at startup"""
-    global model, job_database, job_matrix, geolocator
+def ensure_model_loaded():
+    """Lazy load the ML model and job database on first request"""
+    global model, job_database, job_matrix, geolocator, _model_loading, _model_loaded
     
-    print("🚀 Starting ML Job Matching API...")
+    # If already loaded, return immediately
+    if _model_loaded:
+        return True
     
-    # Load model
-    print(f"   Loading model: {MODEL_NAME}...")
-    model = SentenceTransformer(MODEL_NAME)
-    print("   ✅ Model loaded!")
+    # If currently loading, wait
+    if _model_loading:
+        print("⏳ Model is being loaded by another request, waiting...")
+        while _model_loading:
+            time.sleep(0.5)
+        return _model_loaded
     
-    # Load job database
-    if not os.path.exists(JOB_EMBEDDINGS_PATH):
-        print("   ⚠️ Warning: Job embeddings file not found!")
-        job_database = []
-        job_matrix = np.array([])
-    else:
-        with open(JOB_EMBEDDINGS_PATH, 'r', encoding='utf-8') as f:
-            job_database = json.load(f)
+    # Start loading
+    _model_loading = True
+    try:
+        print("🚀 Loading ML Job Matching API components...", flush=True)
         
-        # Prepare job matrix
-        embeddings = [job['embedding'] for job in job_database]
-        job_matrix = np.array(embeddings)
+        # Load model
+        print(f"   Loading model: {MODEL_NAME}...", flush=True)
+        model = SentenceTransformer(MODEL_NAME)
+        print("   ✅ Model loaded!", flush=True)
         
-        # Normalize matrix
-        norms = np.linalg.norm(job_matrix, axis=1, keepdims=True)
-        norms[norms == 0] = 1
-        job_matrix = job_matrix / norms
+        # Load job database
+        if not os.path.exists(JOB_EMBEDDINGS_PATH):
+            print("   ⚠️ Warning: Job embeddings file not found!", flush=True)
+            job_database = []
+            job_matrix = np.array([])
+        else:
+            with open(JOB_EMBEDDINGS_PATH, 'r', encoding='utf-8') as f:
+                job_database = json.load(f)
+            
+            # Prepare job matrix
+            embeddings = [job['embedding'] for job in job_database]
+            job_matrix = np.array(embeddings)
+            
+            # Normalize matrix
+            norms = np.linalg.norm(job_matrix, axis=1, keepdims=True)
+            norms[norms == 0] = 1
+            job_matrix = job_matrix / norms
+            
+            print(f"   ✅ Loaded {len(job_database)} jobs", flush=True)
         
-        print(f"   ✅ Loaded {len(job_database)} jobs")
-    
-    # Initialize geolocator
-    geolocator = Nominatim(user_agent="job_matcher_api")
-    print("   ✅ Geolocator initialized")
-    
-    print("✅ API Ready!\n")
+        # Initialize geolocator
+        geolocator = Nominatim(user_agent="job_matcher_api")
+        print("   ✅ Geolocator initialized", flush=True)
+        
+        print("✅ API Components Ready!\n", flush=True)
+        _model_loaded = True
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error loading model: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        _model_loaded = False
+        return False
+    finally:
+        _model_loading = False
 
 def get_embedding(text):
     """Generate normalized embedding for text"""
@@ -109,12 +137,26 @@ def calculate_distance(coord1, coord2):
         return geodesic(coord1, coord2).kilometers
     return float('inf')
 
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint"""
+    return jsonify({
+        'message': 'ML Job Matching API',
+        'status': 'running',
+        'endpoints': {
+            'health': '/api/health',
+            'match_jobs': '/api/match-jobs (POST)',
+            'match_jobs_location': '/api/match-jobs-with-location (POST)'
+        }
+    })
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'model_loaded': model is not None,
+        'model_loaded': _model_loaded,
+        'model_loading': _model_loading,
         'jobs_loaded': len(job_database) if job_database else 0
     })
 
@@ -134,6 +176,10 @@ def match_jobs():
     }
     """
     try:
+        # Ensure model is loaded
+        if not ensure_model_loaded():
+            return jsonify({'error': 'Model failed to load'}), 503
+        
         resume_data = request.json
         
         if not resume_data:
@@ -183,6 +229,8 @@ def match_jobs():
         })
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/match-jobs-with-location', methods=['POST'])
@@ -202,6 +250,10 @@ def match_jobs_with_location():
     }
     """
     try:
+        # Ensure model is loaded
+        if not ensure_model_loaded():
+            return jsonify({'error': 'Model failed to load'}), 503
+        
         resume_data = request.json
         
         if not resume_data:
@@ -297,12 +349,18 @@ def match_jobs_with_location():
         })
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # Load model and data before starting the server
-    load_model_and_data()
+    # Start Flask server immediately without loading model
+    # Model will be loaded on first API request
+    print("🚀 Starting Flask server...", flush=True)
+    print("📝 Model will load on first API request", flush=True)
     
-    # Start Flask server
     port = int(os.environ.get('PORT', 5000))
+    print(f"🌐 Server starting on port {port}", flush=True)
+    sys.stdout.flush()
+    
     app.run(host='0.0.0.0', port=port, debug=False)
